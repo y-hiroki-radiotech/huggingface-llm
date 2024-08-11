@@ -92,11 +92,13 @@ config = {
 }
 
 # wandb.init() を呼び出し、config を設定
-with wandb.init(
-    project="fake-news-detection-distilbert",
-    name="distilbert-fp16-callbacks",
-    tags=["baseline", "distilbert", "fp16"],
-    group="distilbert",
-    config=config,
-) as run:
+try:
+    wandb.init(
+        project="fake-news-detection",
+    name="tinybert",
+    tags=["baseline", "tinybert"],
+    group="tinybert",
+    config=config)
     trainer.train()
+finally:
+    wandb.finish()
