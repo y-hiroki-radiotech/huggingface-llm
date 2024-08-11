@@ -68,7 +68,7 @@ from transformers import Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
-    compute_metrics=compute_metrics_evaluate,
+    compute_metrics=compute_metrics,
     train_dataset=encoded_dataset["train"],
     eval_dataset=encoded_dataset["validation"],
     tokenizer=distilbert_tokenizer
