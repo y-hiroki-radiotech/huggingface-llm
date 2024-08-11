@@ -43,7 +43,7 @@ def compute_metrics(pred):
     return {"accuracy": acc, "f1": f1}
 
 class WandbPredictionProgressCallback(WandbCallback):
-    def __init__(self, trainer, tokenizer, val_dataset, num_samples=100, freq=2):
+    def __init__(self, trainer, tokenizer, val_dataset, num_samples=100, freq=1):
         super().__init__()
         self.trainer = trainer
         self.tokenizer = tokenizer
@@ -53,15 +53,33 @@ class WandbPredictionProgressCallback(WandbCallback):
     def on_evaluate(self, args, state, control, **kwargs):
         super().on_evaluate(args, state, control, **kwargs)
         if state.epoch % self.freq == 0:
+            # Get predictions
             predictions = self.trainer.predict(self.sample_dataset)
-            predictions = compute_metrics(predictions)
-            predictions_df = pd.DataFrame([predictions])
-            # add predictions to a wandb.Table
-            predictions_df["epoch"] = state.epoch
-            records_table = self._wandb.Table(dataframe=predictions_df)
-            # log the table to wandb
-            self._wandb.log({"distilbert_sample_predictions": records_table})
-
+            metrics = compute_metrics(predictions)
+            
+            # Create a summary table
+            summary_df = pd.DataFrame([metrics])
+            summary_df["epoch"] = state.epoch
+            summary_table = wandb.Table(dataframe=summary_df)
+            
+            # Create a detailed prediction table
+            detailed_table = wandb.Table(columns=["Text", "True Label", "Predicted Label", "Confidence"])
+            
+            for i in range(len(self.sample_dataset)):
+                input_ids = self.sample_dataset[i]['input_ids']
+                text = self.tokenizer.decode(input_ids, skip_special_tokens=True)
+                true_label = predictions.label_ids[i]
+                pred_label = predictions.predictions[i].argmax()
+                confidence = predictions.predictions[i].max()
+                
+                detailed_table.add_data(text, true_label, pred_label, confidence)
+            
+            # Log both tables
+            self._wandb.log({
+                "Tinybert_summary": summary_table,
+                "Tinybert_detailed_predictions": detailed_table,
+                "epoch": state.epoch
+            })
 # trainerの設定とcallbackの設定
 from transformers import Trainer
 
